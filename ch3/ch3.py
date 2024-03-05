@@ -81,8 +81,6 @@ class Tb3(Node):
             case State.STOP:
                 self.vel(0,0)
                 print('FINISHED')
-                raise KeyboardInterrupt
-    
     
     def drive(self, error):
         ACC = 5
