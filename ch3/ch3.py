@@ -69,7 +69,8 @@ class Tb3(Node):
         _, _, self.yaw = quat2euler([self.orientation.w, self.orientation.x, self.orientation.y, self.orientation.z])
         
         self.vel(0, 20)
-        print(f"{self.state=}\n{self.drive_state=}\n{self.last_speed_percentage=}\n")
+
+        print(f"{self.state=}\n{self.drive_state=}\n{self.lin_vel_percent=}\n")
         match self.state:
             case State.DRIVE_FORWARD_ONE:
                 self.drive_along_axis(my_distance, 'y')
