@@ -64,30 +64,28 @@ class Tb3(Node):
             origin_position_in_maze = (0.5, 0.5)
             self.transformation = (origin_position_in_maze[0] - self.position[0], origin_position_in_maze[1] - self.position[1])
         self.position = self.translate_to_maze((msg.pose.pose.position.x, msg.pose.pose.position.y))
-
         self.orientation = msg.pose.pose.orientation    
         _, _, self.yaw = quat2euler([self.orientation.w, self.orientation.x, self.orientation.y, self.orientation.z])
-        
         self.vel(0, 20)
 
         print(f"{self.state=}\n{self.drive_state=}\n{self.lin_vel_percent=}\n")
         match self.state:
             case State.DRIVE_FORWARD_ONE:
-                self.drive_along_axis(my_distance, 'y')
+                self.drive(my_distance, 'y')
             case State.DRIVE_FORWARD_TWO:
-                self.drive_along_axis(my_distance, 'x')
+                self.drive(my_distance, 'x')
             case State.ROTATING_ONE:
                 self.rotate(my_angle)
             case State.STOP:
                 self.vel(0,0)
                 print('FINISHED')
     
-    def drive(self, error):
-        ACC = 15
-        DEACC = 25
+    def set_procedural_vel(self, error):
+        ACC = 5
+        DEACC = 15
         TOLERANCE = 0.01
-        VEL_MAX = 50
-        VEL_MIN = 20
+        VEL_MAX = 40
+        VEL_MIN = 15
         # tolaranz guad, breche ab wenn alles fertig 
         if (error <= TOLERANCE):
             self.vel(0)
@@ -110,7 +108,7 @@ class Tb3(Node):
         return False
     
         
-    def drive_along_axis(self, total_distance: int, axis: str):
+    def drive(self, total_distance: int):
         
         if self.target_position == None:
             target_x = self.position[0] + total_distance * math.cos(self.yaw)
@@ -120,18 +118,8 @@ class Tb3(Node):
         dy = self.target_position[1] - self.position[1]
         remaining_distance = math.sqrt(dx**2 + dy**2)
 
-        # if axis == 'y':
-        #     if self.target_position == None:
-        #         self.target_position = (self.position[0], self.position[1] + total_distance)            
-        #     remaining_distance = abs(self.position[1] - self.target_position[1])
-                        
-        # elif axis == 'x':
-        #     if self.target_position == None:
-        #         self.target_position = (self.position[0] + total_distance, self.position[1])            
-        #     remaining_distance = abs(self.position[0] - self.target_position[0])
-        
-        self.drive(remaining_distance)
-        if (self.drive(remaining_distance)):
+        self.set_procedural_vel(remaining_distance)
+        if (self.set_procedural_vel(remaining_distance)):
             match self.state:
                 case State.DRIVE_FORWARD_ONE:
                     self.state = State.ROTATING_ONE
