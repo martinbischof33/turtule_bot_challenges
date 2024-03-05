@@ -83,11 +83,11 @@ class Tb3(Node):
                 print('FINISHED')
     
     def drive(self, error):
-        ACC = 5
-        DEACC = 15
+        ACC = 25
+        DEACC = 25
         TOLERANCE = 0.01
-        VEL_MAX = 40
-        VEL_MIN = 15
+        VEL_MAX = 100
+        VEL_MIN = 40
         # tolaranz guad, breche ab wenn alles fertig 
         if (error <= TOLERANCE):
             self.vel(0)
@@ -165,7 +165,7 @@ class Tb3(Node):
             self.reset_environment()
             return True
         else:
-            self.vel(0, -10)
+            self.vel(0, -75)
 
     def subtract_angles(self, angle1, angle2):
         result = (angle1 - angle2) % (2 * math.pi)
