@@ -6,7 +6,6 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
-
 from transforms3d.euler import quat2euler
 
 from enum import Enum, auto
@@ -33,50 +32,43 @@ class Tb3(Node):
         
         self.odom_sub = self.create_subscription(Odometry, 'odom', self.odom_callback, 10)
 
-        self.ang_vel_percent = 0
-        self.last_speed_percentage = 0
         self.lin_vel_percent = 0
         
         self.target_position = None
         self.target_angle = None
-        self.MAX_LIN_VEL = 0.26
-        
+
         self.state = State.DRIVE_FORWARD_ONE
         self.transformation = None
         
         self.drive_state = DriveState.STOP
         self.deacc_threshold = 0.1
 
+
     def vel(self, lin_vel_percent, ang_vel_percent=0):
         """Publishes linear and angular velocities in percent"""
         # for TB3 Waffle
         MAX_LIN_VEL = 0.26  # m/s
         MAX_ANG_VEL = 1.82  # rad/s
-
         cmd_vel_msg = Twist()
         cmd_vel_msg.linear.x = MAX_LIN_VEL * lin_vel_percent / 100
         cmd_vel_msg.angular.z = MAX_ANG_VEL * ang_vel_percent / 100
-
         self.cmd_vel_pub.publish(cmd_vel_msg)
-        self.ang_vel_percent = ang_vel_percent
-        self.last_speed_percentage = lin_vel_percent
 
 
     def odom_callback(self, msg):        
-        
-        
+        my_angle = math.radians(90)
+        my_distance = 0.15
+
         if self.transformation == None:
             self.position = (msg.pose.pose.position.x, msg.pose.pose.position.y)
             origin_position_in_maze = (0.5, 0.5)
             self.transformation = (origin_position_in_maze[0] - self.position[0], origin_position_in_maze[1] - self.position[1])
+
         self.position = self.translate_to_maze((msg.pose.pose.position.x, msg.pose.pose.position.y))     
-        
         self.orientation = msg.pose.pose.orientation    
         _, _, self.yaw = quat2euler([self.orientation.w, self.orientation.x, self.orientation.y, self.orientation.z])
         
         self.vel(0, 20)
-        my_angle = math.radians(90)
-        my_distance = 0.3
         print(f"{self.state=}\n{self.drive_state=}\n{self.last_speed_percentage=}\n")
         match self.state:
             case State.DRIVE_FORWARD_ONE:
@@ -96,7 +88,6 @@ class Tb3(Node):
         TOLERANCE = 0.01
         VEL_MAX = 50
         VEL_MIN = 10
-        
         # tolaranz guad, breche ab wenn alles fertig 
         if (error <= TOLERANCE):
             self.vel(0)
@@ -115,8 +106,6 @@ class Tb3(Node):
             case DriveState.DEACC:
                 self.lin_vel_percent -= DEACC
                 self.lin_vel_percent = max(VEL_MIN, self.lin_vel_percent)  # cap to min speed   
-        
-            
         self.vel(self.lin_vel_percent)
         return False
     
@@ -148,13 +137,10 @@ class Tb3(Node):
         Args:
             total_angle (float): Angle in RAD
         '''
-        #_, _, self.yaw = quat2euler([orientation.x, orientation.y, orientation.z, orientation.w])
-        #target_yaw = self.normalize_angle(target_yaw + self.yaw)
-        
         if self.target_angle == None:
             self.target_angle = (self.yaw - total_angle) % (2 * math.pi)
         print(f"{self.target_angle=}")   
-        remaining_angle =   self.subtract_angles(self.target_angle, self.yaw)
+        remaining_angle = self.subtract_angles(self.target_angle, self.yaw)
         print(f"{remaining_angle=}")
         if abs(remaining_angle) < math.radians(2):
             self.vel(0, 0)
