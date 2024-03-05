@@ -41,7 +41,7 @@ class Tb3(Node):
         self.transformation = None
         
         self.drive_state = DriveState.STOP
-        self.deacc_threshold = 0.1
+        self.deacc_threshold = 0.01
 
 
     def vel(self, lin_vel_percent, ang_vel_percent=0):
@@ -84,10 +84,10 @@ class Tb3(Node):
     
     
     def drive(self, error):
-        ACC = 10
+        ACC = 5
         DEACC = 15
         TOLERANCE = 0.01
-        VEL_MAX = 50
+        VEL_MAX = 40
         VEL_MIN = 15
         # tolaranz guad, breche ab wenn alles fertig 
         if (error <= TOLERANCE):
