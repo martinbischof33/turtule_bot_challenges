@@ -86,7 +86,7 @@ class Tb3(Node):
         ACC = 25
         DEACC = 25
         TOLERANCE = 0.01
-        VEL_MAX = 100
+        VEL_MAX = 75
         VEL_MIN = 40
         # tolaranz guad, breche ab wenn alles fertig 
         if (error <= TOLERANCE):
