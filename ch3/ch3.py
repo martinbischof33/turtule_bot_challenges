@@ -63,8 +63,8 @@ class Tb3(Node):
             self.position = (msg.pose.pose.position.x, msg.pose.pose.position.y)
             origin_position_in_maze = (0.5, 0.5)
             self.transformation = (origin_position_in_maze[0] - self.position[0], origin_position_in_maze[1] - self.position[1])
+        self.position = self.translate_to_maze((msg.pose.pose.position.x, msg.pose.pose.position.y))
 
-        self.position = self.translate_to_maze((msg.pose.pose.position.x, msg.pose.pose.position.y))     
         self.orientation = msg.pose.pose.orientation    
         _, _, self.yaw = quat2euler([self.orientation.w, self.orientation.x, self.orientation.y, self.orientation.z])
         
@@ -111,6 +111,18 @@ class Tb3(Node):
     
         
     def drive_along_axis(self, total_distance: int, axis: str):
+        
+        if self.target_position == None:
+            target_x = self.position[0] + total_distance * math.cos(self.yaw)
+            target_y  = self.position[1] + total_distance * math.sin(self.yaw)
+            self.target_position = (target_x, target_y)
+            pass
+        
+        dx = self.target_position[0] - self.position[0]
+        dy = self.target_position[1] - self.position[1]
+        remaining_distance = math.sqrt(dx**2 + dy**2)
+
+
         if axis == 'y':
             if self.target_position == None:
                 self.target_position = (self.position[0], self.position[1] + total_distance)            
