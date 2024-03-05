@@ -117,22 +117,19 @@ class Tb3(Node):
             target_x = self.position[0] + total_distance * math.cos(self.yaw)
             target_y  = self.position[1] + total_distance * math.sin(self.yaw)
             self.target_position = (target_x, target_y)
-            pass
-        
         dx = self.target_position[0] - self.position[0]
         dy = self.target_position[1] - self.position[1]
         remaining_distance = math.sqrt(dx**2 + dy**2)
 
-
-        if axis == 'y':
-            if self.target_position == None:
-                self.target_position = (self.position[0], self.position[1] + total_distance)            
-            remaining_distance = abs(self.position[1] - self.target_position[1])
+        # if axis == 'y':
+        #     if self.target_position == None:
+        #         self.target_position = (self.position[0], self.position[1] + total_distance)            
+        #     remaining_distance = abs(self.position[1] - self.target_position[1])
                         
-        elif axis == 'x':
-            if self.target_position == None:
-                self.target_position = (self.position[0] + total_distance, self.position[1])            
-            remaining_distance = abs(self.position[0] - self.target_position[0])
+        # elif axis == 'x':
+        #     if self.target_position == None:
+        #         self.target_position = (self.position[0] + total_distance, self.position[1])            
+        #     remaining_distance = abs(self.position[0] - self.target_position[0])
         
         self.drive(remaining_distance)
         if (self.drive(remaining_distance)):
@@ -169,7 +166,7 @@ class Tb3(Node):
             self.reset_environment()
             return True
         else:
-            self.vel(0, 10)
+            self.vel(0, -10)
 
     def subtract_angles(self, angle1, angle2):
         result = (angle1 - angle2) % (2 * math.pi)
