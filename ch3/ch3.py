@@ -86,7 +86,7 @@ class Tb3(Node):
         ACC = 15
         DEACC = 25
         TOLERANCE = 0.01
-        VEL_MAX = 60
+        VEL_MAX = 50
         VEL_MIN = 20
         # tolaranz guad, breche ab wenn alles fertig 
         if (error <= TOLERANCE):
@@ -165,7 +165,7 @@ class Tb3(Node):
             self.reset_environment()
             return True
         else:
-            self.vel(0, -75)
+            self.vel(0, -10)
 
     def subtract_angles(self, angle1, angle2):
         result = (angle1 - angle2) % (2 * math.pi)
