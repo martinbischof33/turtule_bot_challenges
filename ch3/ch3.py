@@ -83,11 +83,11 @@ class Tb3(Node):
                 print('FINISHED')
     
     def drive(self, error):
-        ACC = 25
+        ACC = 15
         DEACC = 25
         TOLERANCE = 0.01
-        VEL_MAX = 75
-        VEL_MIN = 40
+        VEL_MAX = 60
+        VEL_MIN = 20
         # tolaranz guad, breche ab wenn alles fertig 
         if (error <= TOLERANCE):
             self.vel(0)
