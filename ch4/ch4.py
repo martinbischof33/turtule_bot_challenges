@@ -9,8 +9,6 @@ from nav_msgs.msg import Odometry
 
 from transforms3d.euler import quat2euler
 
-from c4_graph_node import GraphNode
-
 from enum import Enum, auto
 
 class State(Enum):
@@ -47,10 +45,15 @@ class Tb3(Node):
         self.target_direction = 0
         
         self.rotation_for_direction = [0, 90, 180, -90]
-        self.nodge = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-        
-        self.graph = GraphNode(0, 0)
+        self.nodge = [(0, 1), (1, 0), (0, -1), (-1, 0)]
         self.rotation_shift = 0
+        
+        self.current_tile = (0, 0)
+        self.explored_tiles = []
+        self.unexplored_tiles = [self.current_tile]
+        self.tile_path = [self.current_tile]
+        self.current_neighbour_tiles = []
+        self.final_tile = (1,1)
 
     def scan_callback(self, msg):
         if self.state == State.FIND_WALLS:
@@ -58,22 +61,33 @@ class Tb3(Node):
                 self.msg_to_last_scans(msg)
             else:
                 four_distances = self.get_average_of_direction()
-                self.no_walls = []
+                self.unexplored_tiles = self.unexplored_tiles[1:]
+                self.explored_tiles.append(self.current_tile)
+                
+                no_walls = []
                 for i, direction in enumerate(four_distances):
                     if direction >= 1:
-                        self.no_walls.append(i)
-                        
-                print(self.no_walls)
-                neighbours = self.generate_neighbours()
+                        no_walls.append(i)
+                self.current_neighbour_tiles = self.get_neighbour_tiles(no_walls)
                 
-                self.graph.add_neighbours(neighbours)
-                self.graph.is_explored = True
+                
+                
+                if self.final_tile in self.explored_tiles:
+                    self.state = State.STOP
+                    return
+                
+                for tile in self.current_neighbour_tiles:
+                    if tile not in self.explored_tiles:
+                        self.unexplored_tiles.append(tile)
+                
+                
+                
                 self.state = State.DECIDE
                 self.last_scans = []
         pass
         
     def odom_callback(self, msg):       
-        
+        #
         if self.transformation == None:
             self.position = (msg.pose.pose.position.x, msg.pose.pose.position.y)
             origin_position_in_maze = (0.5, 0.5)
@@ -90,26 +104,32 @@ class Tb3(Node):
                 self.rotate()
             case State.DRIVE:
                 self.drive_to_next_tile()
-        
-        print(f"\n\n{self.state}")
+            case State.STOP:
+                print('FINISHED')
     
     def decide(self):
-        print(self.graph)
         # find direction
-        self.target_direction = self.no_walls.pop()
+        self.target_tile = self.unexplored_tiles[0]
+        print(f"here: {self.target_tile=}, {self.unexplored_tiles=}, {self.current_neighbour_tiles=}")
+        self.target_direction = self.find_direction_to_target_tile()        
+        self.rotation_shift = (self.rotation_shift + self.target_direction) % 4
+        print(f"new {self.rotation_shift=}, {self.target_direction=}")
+        print(f"{self.current_tile=}\n{self.unexplored_tiles=}\n{self.explored_tiles=}\n{self.target_tile=}\n{self.target_direction}\n")
+        self.current_tile = self.target_tile
         # react to decision:
         self.state = State.ROTATE
+        print(f'Start to rotate. {self.target_direction=}')
         
-    def generate_neighbours(self):
-        neighbours = []
-        for i in self.no_walls:
-            index = (i-self.rotation_shift)%4
-            x = self.graph.x + self.nodge[index][0]
-            y = self.graph.y + self.nodge[index][1]
-            new_node = GraphNode(x, y)
-            neighbours.append(new_node)
-        return neighbours
-        
+    def get_neighbour_tiles(self, no_walls):        
+        nts = []
+        for w in no_walls:
+            index = (w + self.rotation_shift) % 4
+            print(f"{self.current_tile=}, {w=}")
+            nt_x = self.current_tile[0] + self.nodge[index][0]
+            nt_y = self.current_tile[1] + self.nodge[index][1]
+            print(f"{self.current_tile=}, {w=}, nts= ({nt_x}, {nt_y}), {self.rotation_shift}")
+            nts.append((nt_x, nt_y))
+        return nts
     
     def msg_to_last_scans(self, msg):
         n = len(msg.ranges)
@@ -160,19 +180,17 @@ class Tb3(Node):
         remaining_distance = math.sqrt(dx**2 + dy**2)
             
         speedPercentage = min(40, remaining_distance / self.MAX_LIN_VEL * 100)
-        print(f"{speedPercentage=}\n{self.last_speed_percentage=}\n{remaining_distance=}")
         if speedPercentage > self.last_speed_percentage:
             speedPercentage = min(speedPercentage, self.last_speed_percentage + MAX_INCREASE_PERCENTAGE)
         else:
             speedPercentage = max(speedPercentage, self.last_speed_percentage - MAX_DECREASE_PERCENTAGE)
-        print(speedPercentage)
-        #self.lin_vel_percent = speedPercentage
         self.last_speed_percentage = speedPercentage
         self.vel(speedPercentage, 0)
 
         if (remaining_distance <= TOLERANCE):
             self.vel(0)
             self.state = State.FIND_WALLS
+            print('Looking for the walls.')
             self.reset_environment()
             return True
             
@@ -182,19 +200,17 @@ class Tb3(Node):
             total_angle (float): Angle in RAD
         '''
         total_angle = self.rotation_for_direction[self.target_direction]
-        self.rotation_shift = (self.rotation_shift + self.target_direction) % 4
         turning_speed = -10
         if total_angle < 0:
             turning_speed = 10
         
         total_angle = math.radians(total_angle)
         if self.target_angle == None:
-            self.target_angle = (self.yaw - total_angle) % (2 * math.pi)
-        print(f"{self.target_angle=}")   
+            self.target_angle = (self.yaw - total_angle) % (2 * math.pi) 
         remaining_angle =   self.subtract_angles(self.target_angle, self.yaw)
-        print(f"{remaining_angle=}")
         if abs(remaining_angle) < math.radians(2):
             self.vel(0, 0)
+            print('Start driving!')
             self.state = State.DRIVE
             self.reset_environment()
             return True
@@ -221,8 +237,11 @@ class Tb3(Node):
         '''
         return (point[0] + self.transformation[0], point[1] + self.transformation[1])
         
-    
-    
+    def find_direction_to_target_tile(self):
+        x_dif = self.target_tile[0] - self.current_tile[0]
+        y_dif = self.target_tile[1] - self.current_tile[1]
+        print(f"\n{x_dif=}, {y_dif=},\n{self.target_tile[0]=}, {self.current_tile[0]=}\n{self.target_tile[1]=}, {self.current_tile[1]=}")
+        return (self.nodge.index((x_dif, y_dif)) - self.rotation_shift) % 4
 
         
 
